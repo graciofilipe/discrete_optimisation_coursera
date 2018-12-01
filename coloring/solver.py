@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from ortools.sat.python import cp_model
-from ortools.linear_solver import pywraplp
+import networkx as nx
+
 
 
 
@@ -29,16 +30,23 @@ def solve_it(input_data):
               for node in range(node_count)]
 
     # make the edge constraints
+    G = nx.Graph()
     for edge in edges:
+        print(edge)
         ni = edge[0]
         nj = edge[1]
-        cpmodel.Add(node_color_cp[ni] != node_color_cp[nj])
+        G.add_edge(ni, nj)
+    cliques = nx.algorithms.clique.enumerate_all_cliques(G)
+    for clique in cliques:
+        if len(clique)>1:
+            cpmodel.AddAllDifferent([node_color_cp[i] for i in clique])
+
 
     sum_cols = sum(node_color_cp)
     cpmodel.Minimize(sum_cols)
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 10.0
+    solver.parameters.max_time_in_seconds = 20.0
     status = solver.Solve(cpmodel)
     solution_node_colors = [solver.Value(node_color_cp[i]) for i in range(node_count)]
 
