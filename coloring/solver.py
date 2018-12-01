@@ -22,49 +22,33 @@ def solve_it(input_data):
         parts = line.split()
         edges.append((int(parts[0]), int(parts[1])))
 
-    # build a solution
-    model = cp_model.CpModel()
-    lp_solver = pywraplp.Solver('SolveIntegerProblem',
-                             pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
+    # build a solution with CP MODEL
+    cpmodel = cp_model.CpModel()
 
-    # initialise the variables
-    node_color = [model.NewIntVar(0, node_count - 1, 'node_{}'.format(node))
+    node_color_cp = [cpmodel.NewIntVar(0, node_count - 1, 'node_{}'.format(node))
               for node in range(node_count)]
-
-    node_color_lp = [lp_solver.IntVar(0, node_count - 1, 'node_{}'.format(node))
-                  for node in range(node_count)]
-
-    # number of colors used
-    color_bool_list = []
-    for potential_color in range(node_count):
-        color_exists = lp_solver.Sum([potential_color==node_color_lp[node] for node in range(node_count)]) >= 1
-        color_bool_list.append(color_exists)
-
-        
-
-    n_colors = lp_solver.Sum(color_bool_list)
-
-    lp_solver.Minimize(n_colors)
-
 
     # make the edge constraints
     for edge in edges:
         ni = edge[0]
         nj = edge[1]
-        #model.Add(node_color[ni]!=node_color[nj])
-        lp_solver.Add(node_color_lp[ni]!=node_color_lp[nj])
+        # model.Add(node_color[ni]!=node_color[nj])
+        cpmodel.Add(node_color_cp[ni] != node_color_cp[nj])
 
-    result_status = lp_solver.Solve()
+    sum_cols = sum(node_color_cp)
+    cpmodel.Minimize(sum_cols)
 
-    for variable in node_color_lp:
-        print('%s = %d' % (variable.name(), variable.solution_value()))
+    solver = cp_model.CpSolver()
+    status = solver.Solve(cpmodel)
+    solution_node_colors = [solver.Value(node_color_cp[i]) for i in range(node_count)]
+    print(solution_node_colors)
 
 
     # prepare the solution in the specified output format
-    #output_data = str(node_count) + ' ' + str(0) + '\n'
-    #output_data += ' '.join(map(str, solution))
+    output_data = str(node_count) + ' ' + str(0) + '\n'
+    output_data += ' '.join(map(str, solution_node_colors))
 
-    return 1
+    return output_data
 
 
 import sys
