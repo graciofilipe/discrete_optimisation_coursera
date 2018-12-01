@@ -32,7 +32,6 @@ def solve_it(input_data):
     # make the edge constraints
     G = nx.Graph()
     for edge in edges:
-        print(edge)
         ni = edge[0]
         nj = edge[1]
         G.add_edge(ni, nj)
