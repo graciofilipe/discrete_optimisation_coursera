@@ -25,23 +25,22 @@ def solve_it(input_data):
     # build a solution with CP MODEL
     cpmodel = cp_model.CpModel()
 
-    node_color_cp = [cpmodel.NewIntVar(0, node_count - 1, 'node_{}'.format(node))
+    node_color_cp = [cpmodel.NewIntVar(0, node, 'node_{}'.format(node))
               for node in range(node_count)]
 
     # make the edge constraints
     for edge in edges:
         ni = edge[0]
         nj = edge[1]
-        # model.Add(node_color[ni]!=node_color[nj])
         cpmodel.Add(node_color_cp[ni] != node_color_cp[nj])
 
     sum_cols = sum(node_color_cp)
     cpmodel.Minimize(sum_cols)
 
     solver = cp_model.CpSolver()
+    solver.parameters.max_time_in_seconds = 10.0
     status = solver.Solve(cpmodel)
     solution_node_colors = [solver.Value(node_color_cp[i]) for i in range(node_count)]
-    print(solution_node_colors)
 
 
     # prepare the solution in the specified output format
