@@ -69,7 +69,7 @@ def solve_it(input_data):
         cpmodel.Add(item_cover>0)
 
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 66.0
+    solver.parameters.max_time_in_seconds = 666.0
 
     cpmodel.Minimize(total_cost)
 
