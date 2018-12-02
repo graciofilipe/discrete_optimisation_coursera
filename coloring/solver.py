@@ -32,6 +32,8 @@ def solve_it(input_data):
     # build a solution with CP MODEL
     cpmodel = cp_model.CpModel()
 
+    n_colors_used = cpmodel.NewIntVar(0, node_count, 'n_cols')
+
     node_color_cp = [cpmodel.NewIntVar(0, node, 'node_{}'.format(node))
               for node in range(node_count)]
 
@@ -42,6 +44,11 @@ def solve_it(input_data):
         nj = edge[1]
         G.add_edge(ni, nj)
         cpmodel.Add(node_color_cp[ni]!=node_color_cp[nj])
+
+    # every color has to be lower than n_colors
+    for node_idx in range(node_count):
+        cpmodel.Add(node_color_cp[node_idx] <= n_colors_used)
+
 
 
     #cliques = list(nx.algorithms.clique.find_cliques(G))
@@ -56,14 +63,15 @@ def solve_it(input_data):
     #    cpmodel.AddAllDifferent([node_color_cp[i] for i in clique])
 
 
+    ## DEFine AUX VAR That IS NUMBER OF COLORS
+
 
     print('done adding constraints')
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = 44.0
 
 
-
-    obj_fun = max([node_color_cp[i] for i in range(node_count)])
+    obj_fun = n_colors_used
     cpmodel.Minimize(obj_fun)
 
     print('about to solve')
@@ -73,11 +81,10 @@ def solve_it(input_data):
     print('solved')
     solution_node_colors = [solver.Value(node_color_cp[i]) for i in range(node_count)]
 
-    n_colors_used = len(Counter(solution_node_colors))
     print('obj_fun', obj_fun)
     print('obj value', solver.ObjectiveValue())
     # prepare the solution in the specified output format
-    output_data = str(n_colors_used) + ' ' + str(0) + '\n'
+    output_data = str(solver.Value(n_colors_used)) + ' ' + str(0) + '\n'
     output_data += ' '.join(map(str, solution_node_colors))
 
 
