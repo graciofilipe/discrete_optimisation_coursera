@@ -68,7 +68,7 @@ def solve_it(input_data):
 
     print('done adding constraints')
     solver = cp_model.CpSolver()
-    solver.parameters.max_time_in_seconds = 44.0
+    solver.parameters.max_time_in_seconds = 666.0
 
 
     obj_fun = n_colors_used
