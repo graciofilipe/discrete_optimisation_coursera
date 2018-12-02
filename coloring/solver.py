@@ -31,9 +31,7 @@ def solve_it(input_data):
 
     # build a solution with CP MODEL
     cpmodel = cp_model.CpModel()
-
     n_colors_used = cpmodel.NewIntVar(0, node_count, 'n_cols')
-
     node_color_cp = [cpmodel.NewIntVar(0, node, 'node_{}'.format(node))
               for node in range(node_count)]
 
