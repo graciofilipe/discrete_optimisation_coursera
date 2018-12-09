@@ -3,6 +3,8 @@
 
 from collections import namedtuple
 import math
+from ortools.linear_solver import pywraplp
+from ortools.constraint_solver import pywrapcp
 
 Point = namedtuple("Point", ['x', 'y'])
 Facility = namedtuple("Facility", ['index', 'setup_cost', 'capacity', 'location'])
@@ -31,35 +33,79 @@ def solve_it(input_data):
         parts = lines[i].split()
         customers.append(Customer(i-1-facility_count, int(parts[0]), Point(float(parts[1]), float(parts[2]))))
 
-    # build a trivial solution
-    # pack the facilities one by one until all the customers are served
-    solution = [-1]*len(customers)
-    capacity_remaining = [f.capacity for f in facilities]
-
-    facility_index = 0
-    for customer in customers:
-        if capacity_remaining[facility_index] >= customer.demand:
-            solution[customer.index] = facility_index
-            capacity_remaining[facility_index] -= customer.demand
-        else:
-            facility_index += 1
-            assert capacity_remaining[facility_index] >= customer.demand
-            solution[customer.index] = facility_index
-            capacity_remaining[facility_index] -= customer.demand
-
-    used = [0]*len(facilities)
-    for facility_index in solution:
-        used[facility_index] = 1
+    demand_vector = [c.demand for c in customers]
+    capacity_vector = [f.capacity for f in facilities]
+    fixed_costs_vector = [f.setup_cost for f in facilities]
+    distance_matrix = []
+    for fac in facilities:
+        fac_distances = [length(fac.location, cust.location) for cust in customers]
+        distance_matrix.append(fac_distances)
 
 
 
-    # calculate the cost of the solution
-    obj = sum([f.setup_cost*used[f.index] for f in facilities])
-    for customer in customers:
-        obj += length(customer.location, facilities[solution[customer.index]].location)
+    # build a solution
+    solver = pywraplp.Solver('SolveIntegerProblem',
+                             pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
 
+    facility_to_customer = {}
+    for fac in range(facility_count):
+        for cust in range(customer_count):
+            facility_to_customer[(fac, cust)] = solver.BoolVar(name='f{f}_c{c}'.format(f=fac, c=cust))
+
+    facilities_open_bool = [solver.BoolVar(name='f{f}'.format(f=f)) for f in range(facility_count)]
+
+    # TODO: this isn't right
+    print('reconcile the facilities open')
+    for fac in range(facility_count):
+        solver.Add(facilities_open_bool[fac]*10000 >= solver.Sum([facility_to_customer[(fac, cust)] \
+                                           for cust in range(customer_count)]))
+
+    print('every customer is served by one and only one facility')
+    for cust in range(customer_count):
+        solver.Add(1 == solver.Sum([facility_to_customer[(fac, cust)] \
+                                           for fac in range(facility_count)]))
+
+
+    # capacity constraints
+    for fac in range(facility_count):
+        solver.Add(capacity_vector[fac] >= solver.Sum(
+            [demand_vector[cust]*facility_to_customer[(fac, cust)] for cust in range(customer_count)]))
+
+
+    # fixed costs
+    fixed_costs_tmp = []
+    for fac in range(facility_count):
+        fixed_costs_tmp.append(facilities_open_bool[fac]*fixed_costs_vector[fac])
+    fixed_costs = solver.Sum(fixed_costs_tmp)
+
+    # transportation costs
+    distances = []
+    for fac in range(facility_count):
+        for cust in range(customer_count):
+            distances.append(facility_to_customer[(fac, cust)]*distance_matrix[fac][cust])
+    total_distance = solver.Sum(distances)
+
+
+    # total objective function
+    objective_var = solver.Sum([total_distance, fixed_costs])
+    objective = solver.Minimize(objective_var)
+    solver.Solve()
+    obj = int(solver.Objective().Value())
+
+
+    #for fac in range(facility_count):
+    #    for cust in range(customer_count):
+    #        x = int(facility_to_customer[(fac, cust)].SolutionValue())
+    #        print('facility:', fac, 'customer', cust, '-', x)
+
+
+
+    solution = [fac for cust in range(customer_count) for fac in range(facility_count)\
+                if int(facility_to_customer[(fac, cust)].SolutionValue()) ==1]
+
+    print('done!')
     # prepare the solution in the specified output format
-    output_data = '%.2f' % obj + ' ' + str(0) + '\n'
+    output_data = str(obj) + ' ' + str(0) + '\n'
     output_data += ' '.join(map(str, solution))
 
     return output_data
