@@ -55,6 +55,7 @@ def solve_it(input_data):
     distance_matrix = build_distance_matrix(points)
 
     tsp_size = len(points)
+    print('tsp_size', tsp_size)
     num_routes = 1
     starting_point = 0
 
@@ -62,21 +63,31 @@ def solve_it(input_data):
     if tsp_size > 0:
         routing = pywrapcp.RoutingModel(tsp_size, num_routes, starting_point)
         search_parameters = pywrapcp.RoutingModel.DefaultSearchParameters()
+        search_parameters.local_search_metaheuristic = (
+            routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH)
+        search_parameters.time_limit_ms = 20000
         # Create the distance callback.
         dist_callback = create_distance_callback(distance_matrix)
         routing.SetArcCostEvaluatorOfAllVehicles(dist_callback)
         # Solve the problem.
         assignment = routing.SolveWithParameters(search_parameters)
+
+        #for i in range(nodeCount):
+        #    print(i, str(routing.IndexToNode(i)))
+
+
+
         if assignment:
             # Only one route here; otherwise iterate from 0 to routing.vehicles() - 1
             route_number = 0
             index = routing.Start(route_number)  # Index of the variable for the starting node.
-            route = ''
+            route = []
             while not routing.IsEnd(index):
                 # Convert variable indices to node indices in the displayed route.
-                route += str(routing.IndexToNode(index))
+                node = routing.IndexToNode(index)
+                route.append(str(node))
                 index = assignment.Value(routing.NextVar(index))
-            route += str(routing.IndexToNode(index))
+            #route += str(routing.IndexToNode(index))
         else:
             print('No solution found.')
     else:
@@ -86,9 +97,7 @@ def solve_it(input_data):
     # build a trivial solution
     # visit the nodes in the order they appear in the file
     solution = route
-    print(solution)
-    for p in distance_matrix:
-        print(p)
+    #print(solution)
 
     # calculate the length of the tour
     obj = str(assignment.ObjectiveValue())
