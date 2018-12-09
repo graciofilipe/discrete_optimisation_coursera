@@ -47,6 +47,8 @@ def solve_it(input_data):
     solver = pywraplp.Solver('SolveIntegerProblem',
                              pywraplp.Solver.CBC_MIXED_INTEGER_PROGRAMMING)
 
+    solver.SetTimeLimit(66*1000)
+
     facility_to_customer = {}
     for fac in range(facility_count):
         for cust in range(customer_count):
@@ -54,10 +56,9 @@ def solve_it(input_data):
 
     facilities_open_bool = [solver.BoolVar(name='f{f}'.format(f=f)) for f in range(facility_count)]
 
-    # TODO: this isn't right
     print('reconcile the facilities open')
     for fac in range(facility_count):
-        solver.Add(facilities_open_bool[fac]*10000 >= solver.Sum([facility_to_customer[(fac, cust)] \
+        solver.Add(facilities_open_bool[fac]*2*customer_count >= solver.Sum([facility_to_customer[(fac, cust)] \
                                            for cust in range(customer_count)]))
 
     print('every customer is served by one and only one facility')
